@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Github } from 'lucide-react';
 
 import { GridWorld } from './components/World/GridWorld';
 import { Dashboard } from './components/UI/Dashboard';
@@ -134,7 +135,7 @@ function App() {
   }, [agentPosition, simulationSpeed, resetEpisode]);
 
   return (
-    <div className="relative w-full h-screen bg-gray-200 overflow-hidden flex flex-col md:block">
+    <div className="relative w-full h-[100dvh] bg-gray-200 overflow-hidden flex flex-col md:block">
       {/* Header */}
       <div className="absolute top-0 left-0 w-full z-30 p-4 flex justify-between items-start pointer-events-none">
         <div className="bg-gray-900/80 backdrop-blur-md p-4 rounded-xl border border-gray-700 shadow-xl pointer-events-auto">
@@ -142,7 +143,15 @@ function App() {
           <p className="text-gray-400 text-xs mt-1">RL Gym 3D</p>
         </div>
 
-
+        <a 
+          href="https://github.com/Longman-max/Q-Vision-3D" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="bg-gray-900/80 backdrop-blur-md p-3 rounded-xl border border-gray-700 shadow-xl pointer-events-auto text-white hover:bg-gray-800 transition-colors group"
+          title="View Source on GitHub"
+        >
+          <Github className="w-6 h-6 group-hover:scale-110 transition-transform" />
+        </a>
       </div>
 
       <div className="flex-1 relative w-full min-h-0 md:absolute md:inset-0 md:h-full">

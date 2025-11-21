@@ -1,4 +1,3 @@
-import { Github } from 'lucide-react';
 import { QLearningConfig } from '../../lib/rl/QLearningAgent';
 
 interface DashboardProps {
@@ -24,23 +23,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onReset,
 }) => {
   return (
-    <div className="w-full md:absolute md:top-4 md:right-4 md:w-80 md:left-auto md:bottom-auto bg-gray-800/90 backdrop-blur p-4 rounded-t-lg md:rounded-lg shadow-xl text-white border-t md:border border-gray-700 max-h-[50vh] md:max-h-none overflow-y-auto flex-shrink-0 z-10">
-      <div className="flex justify-between items-center mb-4 sticky top-0 bg-gray-800/90 pb-2 z-10">
+    <div className="w-auto mx-4 mb-4 md:m-0 md:absolute md:top-4 md:right-4 md:w-80 md:left-auto md:bottom-auto bg-gray-800/90 backdrop-blur rounded-xl shadow-xl text-white border border-gray-700 max-h-[40vh] md:max-h-none flex flex-col flex-shrink-0 z-10">
+      <div className="flex justify-between items-center p-4 pb-2 flex-shrink-0">
         <h2 className="text-xl font-bold text-blue-400">RL Control Panel</h2>
-        <a 
-          href="https://github.com/Longman-max/Q-Vision-3D" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-gray-400 hover:text-white transition-colors relative group"
-        >
-          <Github className="w-5 h-5" />
-          <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            View Source
-          </span>
-        </a>
       </div>
       
-      <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 pt-0 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2 text-sm bg-gray-900/50 p-2 rounded">
           <div>Episode: <span className="font-mono text-yellow-400">{stats.episode}</span></div>
