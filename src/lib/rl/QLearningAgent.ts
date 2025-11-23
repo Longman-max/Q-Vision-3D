@@ -5,6 +5,7 @@ export interface QLearningConfig {
   alpha: number; // Learning rate
   gamma: number; // Discount factor
   epsilon: number; // Exploration rate
+  trainingMode?: boolean; // Fast forward
 }
 
 export class QLearningAgent {
@@ -71,5 +72,9 @@ export class QLearningAgent {
   
   public getConfig() {
       return this.config;
+  }
+
+  public getQTable() {
+      return this.qTable;
   }
 }

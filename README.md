@@ -2,7 +2,7 @@
 
 **Q-Vision 3D** is an interactive 3D Reinforcement Learning (RL) environment designed to visualize and teach RL concepts. It features a custom-built 3D world where an intelligent agent learns to navigate a grid, avoid hazards, and reach goals.
 
-![Q-Vision 3D Screenshot](./screenshot.png)
+![Q-Vision 3D Screenshot](./public/assets/screenshot.png)
 
 ## Features
 
@@ -13,34 +13,38 @@
 
 ## Controls
 
-![Controls Overview](./controls.png)
+The Control Center dashboard provides real-time control over the Q-Learning algorithm and simulation:
 
-The dashboard provides real-time control over the Q-Learning algorithm and the simulation:
+### Action Controls
+-   **Pause/Resume**: Pause or resume the simulation
+-   **Step**: Execute a single step when paused (for detailed observation)
+-   **Reset Agent**: Resets the agent's position and clears its learned Q-table, starting the learning process from scratch
 
--   **Learning Rate ($\alpha$)**: Determines to what extent newly acquired information overrides old information. A factor of 0 makes the agent learn nothing (exclusively exploiting prior knowledge), while a factor of 1 makes the agent consider only the most recent information (ignoring prior knowledge).
--   **Discount Factor ($\gamma$)**: Determines the importance of future rewards. A factor of 0 makes the agent "myopic" (or short-sighted) by only considering current rewards, while a factor approaching 1 will make it strive for a long-term high reward.
--   **Exploration ($\epsilon$)**: Controls the trade-off between exploration and exploitation. A higher value means the agent is more likely to choose a random action to explore the environment, while a lower value means it will exploit its current knowledge.
--   **Sim Speed**: Adjusts the speed of the simulation. Drag left for faster execution, right for slower observation.
--   **Reset Agent**: Resets the agent's position and clears its learned Q-table, starting the learning process from scratch.
+### Hyperparameters
+-   **Learning Rate (α)**: How much new information overrides old (0-1). Higher = faster learning but less stable
+-   **Discount Factor (γ)**: Importance of future rewards (0-1). Higher = more long-term planning
+-   **Exploration (ε)**: Probability of random actions (0-1). Higher = more exploration vs exploitation
+-   **Simulation Speed**: Delay between steps in milliseconds (10-500ms). Drag right for faster execution, left for slower observation
 
-## Getting Started
+### Advanced Features
+-   **Training Mode**: Disables rendering delay to maximize learning speed. Useful for rapid convergence to optimal policy
+-   **Stats Display**: Real-time episode count, step count, cumulative reward, and win count
+-   **Reward History Chart**: Visual graph of reward progression over episodes
 
-1.  Install dependencies:
-    ```bash
-    npm install
-    ```
+### 3D View Controls
+-   **Rotate**: Click and drag to rotate the camera
+-   **Zoom**: Scroll wheel to zoom in/out
+-   **Pan**: Right-click and drag to pan the view
 
-2.  Run the development server:
-    ```bash
-    npm run dev
-    ```
+## Why this Project?
 
-3.  Open your browser to the local server (usually `http://localhost:5173`).
+I built this project to better understand Reinforcement Learning (RL). It serves as a practical playground for visualizing how agents learn to make decisions in an environment.
 
-## Technologies
+This project is excellent for anyone interested in:
+-   **Robotics**: Understanding how robots perceive and navigate the world.
+-   **Self-Driving Cars**: Learning the foundational concepts behind autonomous vehicle decision-making.
+-   **Game AI**: Seeing how computer players (like in Chess or Go) learn strategies and optimize their gameplay.
 
--   React
--   TypeScript
--   Three.js (@react-three/fiber, @react-three/drei)
--   Vite
--   Tailwind CSS
+---
+
+> "Have you been productive today?"

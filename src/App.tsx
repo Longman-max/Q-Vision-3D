@@ -1,166 +1,226 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Github } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Github, Info, X } from 'lucide-react';
 
 import { GridWorld } from './components/World/GridWorld';
 import { Dashboard } from './components/UI/Dashboard';
-import { QLearningAgent, QLearningConfig } from './lib/rl/QLearningAgent';
-
-const GRID_SIZE = 10;
-const START_POS: [number, number] = [0, 0];
-const GOAL_POS: [number, number] = [9, 9];
-const HAZARDS: [number, number][] = [
-  [2, 2], [2, 3], [2, 4],
-  [5, 5], [5, 6], [4, 6],
-  [7, 1], [7, 2], [8, 2]
-];
-
-const INITIAL_CONFIG: QLearningConfig = {
-  alpha: 0.1,
-  gamma: 0.9,
-  epsilon: 0.1,
-};
+import { useQLearning } from './hooks/useQLearning';
 
 function App() {
-  // RL State
-  const agentRef = useRef(new QLearningAgent(INITIAL_CONFIG));
-  const [agentPosition, setAgentPosition] = useState<[number, number]>(START_POS);
-  const [config, setConfig] = useState<QLearningConfig>(INITIAL_CONFIG);
+  const [showInfo, setShowInfo] = useState(false);
   
-  // Simulation State
-  const [simulationSpeed, setSimulationSpeed] = useState(100); // ms
-  const [stats, setStats] = useState({
-    episode: 1,
-    step: 0,
-    totalReward: 0,
-    wins: 0,
-  });
-
-  // Helper to get state string
-  const getState = (pos: [number, number]) => `${pos[0]},${pos[1]}`;
-
-  // Reset Episode
-  const resetEpisode = useCallback(() => {
-    setAgentPosition(START_POS);
-    setStats(prev => ({
-      ...prev,
-      episode: prev.episode + 1,
-      step: 0,
-      totalReward: 0
-    }));
-  }, []);
-
-  // Full Reset
-  const handleReset = () => {
-    agentRef.current.reset();
-    setStats({
-      episode: 1,
-      step: 0,
-      totalReward: 0,
-      wins: 0
-    });
-    setAgentPosition(START_POS);
-  };
-
-  // Update Agent Config
-  const handleConfigChange = (newConfig: Partial<QLearningConfig>) => {
-    const updated = { ...config, ...newConfig };
-    setConfig(updated);
-    agentRef.current.updateConfig(updated);
-  };
-
-  // Game Loop
+  // Close modal on ESC key press
   useEffect(() => {
-    const interval = setInterval(() => {
-      const currentPos = agentPosition;
-      const currentState = getState(currentPos);
-      
-      // 1. Choose Action
-      const action = agentRef.current.chooseAction(currentState);
-      
-      // 2. Perform Action (Move)
-      let nextRow = currentPos[0];
-      let nextCol = currentPos[1];
-      
-      // 0: Up (row - 1), 1: Right (col + 1), 2: Down (row + 1), 3: Left (col - 1)
-      // Note: In 3D grid, let's map:
-      // Up (-z) -> row - 1
-      // Down (+z) -> row + 1
-      // Left (-x) -> col - 1
-      // Right (+x) -> col + 1
-      
-      if (action === 0) nextRow = Math.max(0, nextRow - 1);
-      if (action === 1) nextCol = Math.min(GRID_SIZE - 1, nextCol + 1);
-      if (action === 2) nextRow = Math.min(GRID_SIZE - 1, nextRow + 1);
-      if (action === 3) nextCol = Math.max(0, nextCol - 1);
-      
-      const nextPos: [number, number] = [nextRow, nextCol];
-      const nextState = getState(nextPos);
-      
-      // 3. Calculate Reward
-      let reward = -0.1; // Living penalty
-      let done = false;
-      let win = false;
-
-      // Check Goal
-      if (nextRow === GOAL_POS[0] && nextCol === GOAL_POS[1]) {
-        reward = 100;
-        done = true;
-        win = true;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showInfo) {
+        setShowInfo(false);
       }
-      // Check Hazards
-      else if (HAZARDS.some(h => h[0] === nextRow && h[1] === nextCol)) {
-        reward = -100;
-        done = true;
-      }
-
-      // 4. Learn
-      agentRef.current.learn(currentState, action, reward, nextState);
-      
-      // 5. Update State
-      setAgentPosition(nextPos);
-      setStats(prev => ({
-        ...prev,
-        step: prev.step + 1,
-        totalReward: prev.totalReward + reward,
-        wins: win ? prev.wins + 1 : prev.wins
-      }));
-
-      if (done) {
-        resetEpisode();
-      }
-
-    }, simulationSpeed);
-
-    return () => clearInterval(interval);
-  }, [agentPosition, simulationSpeed, resetEpisode]);
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showInfo]);
+  
+  const {
+    agentPosition,
+    gridSize,
+    goalPosition,
+    hazards,
+    agent,
+    stats,
+    config,
+    simulationSpeed,
+    setSimulationSpeed,
+    handleReset,
+    handleConfigChange,
+    isPaused,
+    setIsPaused,
+    step
+  } = useQLearning();
 
   return (
-    <div className="relative w-full h-[100dvh] bg-gray-200 overflow-hidden flex flex-col md:block">
+    <div className="relative w-full h-[100dvh] bg-[#000000] overflow-hidden">
       {/* Header */}
-      <div className="absolute top-0 left-0 w-full z-30 p-4 flex justify-between items-start pointer-events-none">
-        <div className="bg-gray-900/80 backdrop-blur-md p-4 rounded-xl border border-gray-700 shadow-xl pointer-events-auto">
-          <h1 className="text-white font-bold text-lg leading-none">Q-Vision 3D</h1>
-          <p className="text-gray-400 text-xs mt-1">RL Gym 3D</p>
+      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-none">
+        <div className="bg-slate-900/80 backdrop-blur-md px-6 py-4 rounded-xl border border-teal-700/50 shadow-xl pointer-events-auto w-fit flex items-center gap-6">
+          <h1 className="text-white font-bold text-xl leading-none">Q-Vision 3D</h1>
+          
+          <button
+            onClick={() => setShowInfo(true)}
+            className="text-slate-400 hover:text-teal-400 transition-colors group"
+            title="About & Help"
+          >
+            <Info className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </button>
+          
+          <a 
+            href="https://github.com/Longman-max/Q-Vision-3D" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-teal-400 transition-colors group"
+            title="View Source on GitHub"
+          >
+            <Github className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </a>
         </div>
-
-        <a 
-          href="https://github.com/Longman-max/Q-Vision-3D" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="bg-gray-900/80 backdrop-blur-md p-3 rounded-xl border border-gray-700 shadow-xl pointer-events-auto text-white hover:bg-gray-800 transition-colors group"
-          title="View Source on GitHub"
-        >
-          <Github className="w-6 h-6 group-hover:scale-110 transition-transform" />
-        </a>
       </div>
 
-      <div className="flex-1 relative w-full min-h-0 md:absolute md:inset-0 md:h-full">
+      {/* Info Modal */}
+      {showInfo && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowInfo(false)}
+        >
+          <div 
+            className="bg-slate-900 rounded-2xl border border-teal-700/50 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-slate-900 border-b border-teal-700/50 p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Q-Vision 3D</h2>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6 text-slate-300">
+              {/* Purpose */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-2">About</h3>
+                <p className="text-sm leading-relaxed">
+                  Q-Vision 3D is an interactive 3D visualization of Q-Learning reinforcement learning in action. 
+                  Watch a wooden robot agent learn to navigate a grid world, avoid hazards, and reach its goal through trial and error.
+                </p>
+              </section>
+
+              {/* Controls */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-3">Controls</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Pause/Resume:</span>
+                    <span className="font-mono">Click Pause/Resume button</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Step:</span>
+                    <span className="font-mono">Click Step (when paused)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">3D View:</span>
+                    <span className="font-mono">Click + Drag to rotate</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Zoom:</span>
+                    <span className="font-mono">Scroll wheel</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Reset:</span>
+                    <span className="font-mono">Click Reset Agent</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Stats Explanation */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-3">Statistics</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-semibold text-white">Episode:</span>
+                    <span className="ml-2">Number of complete training runs (goal reached or hazard hit).</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Step:</span>
+                    <span className="ml-2">Current number of moves in the current episode.</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Reward:</span>
+                    <span className="ml-2">Cumulative reward for the current episode (+10 goal, -10 hazard, -0.01 per step).</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Wins:</span>
+                    <span className="ml-2">Total successful episodes where the agent reached the goal.</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Reward History:</span>
+                    <span className="ml-2">Chart showing total reward for each completed episode.</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Hyperparameters */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-3">Hyperparameters</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="font-semibold text-white">Learning Rate (α):</span>
+                    <span className="ml-2">How much new information overrides old (0-1). Higher = faster learning.</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Discount Factor (γ):</span>
+                    <span className="ml-2">Importance of future rewards (0-1). Higher = more long-term planning.</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Exploration (ε):</span>
+                    <span className="ml-2">Probability of random action (0-1). Higher = more exploration vs exploitation.</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">Simulation Speed:</span>
+                    <span className="ml-2">Delay between steps in milliseconds (10-500ms). Lower = faster simulation.</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Visual Elements */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-3">Visual Elements</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 rounded bg-[#4FB477] mt-0.5"></div>
+                    <div>
+                      <span className="font-semibold text-white">Green Tile:</span>
+                      <span className="ml-2">Goal position (+10 reward)</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 rounded bg-[#DD4B39] mt-0.5"></div>
+                    <div>
+                      <span className="font-semibold text-white">Red Tile:</span>
+                      <span className="ml-2">Hazard (-10 reward)</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 rounded bg-white border border-slate-700 mt-0.5"></div>
+                    <div>
+                      <span className="font-semibold text-white">White Arrows:</span>
+                      <span className="ml-2">Show learned policy (best action direction)</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Training Mode */}
+              <section>
+                <h3 className="text-lg font-bold text-teal-400 mb-2">Training Mode</h3>
+                <p className="text-sm leading-relaxed">
+                  Enable to maximize learning speed by disabling rendering delays. The agent will train much faster, 
+                  but you won't see individual moves. Useful for quick convergence to optimal policy.
+                </p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="absolute inset-0 w-full h-full">
         <GridWorld
           agentPosition={agentPosition}
-          gridSize={GRID_SIZE}
-          goalPosition={GOAL_POS}
-          hazards={HAZARDS}
-          agent={agentRef.current}
+          gridSize={gridSize}
+          goalPosition={goalPosition}
+          hazards={hazards}
+          agent={agent}
           episode={stats.episode}
         />
       </div>
@@ -172,6 +232,9 @@ function App() {
         simulationSpeed={simulationSpeed}
         setSimulationSpeed={setSimulationSpeed}
         onReset={handleReset}
+        isPaused={isPaused}
+        setIsPaused={setIsPaused}
+        onStep={step}
       />
     </div>
   );
