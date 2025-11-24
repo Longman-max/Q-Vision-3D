@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { QLearningConfig } from '../../lib/rl/QLearningAgent';
-import { Activity, Zap, RotateCcw, Settings, Play, Pause, SkipForward, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, Zap, RotateCcw, Settings, Play, Pause, SkipForward, ChevronDown, ChevronUp, Orbit, Maximize } from 'lucide-react';
+import { RewardChart } from './RewardChart';
 
 interface DashboardProps {
   config: QLearningConfig;
@@ -18,44 +19,10 @@ interface DashboardProps {
   isPaused: boolean;
   setIsPaused: (paused: boolean) => void;
   onStep: () => void;
+  autoRotate: boolean;
+  onAutoRotateChange: (rotate: boolean) => void;
+  onResetCamera: () => void;
 }
-
-const RewardChart: React.FC<{ history: number[] }> = ({ history }) => {
-    if (history.length < 2) return null;
-
-    const width = 280;
-    const height = 60;
-    const padding = 5;
-    
-    const min = Math.min(...history);
-    const max = Math.max(...history);
-    const range = max - min || 1;
-    
-    const points = history.map((val, i) => {
-        const x = (i / (history.length - 1)) * (width - 2 * padding) + padding;
-        const y = height - ((val - min) / range) * (height - 2 * padding) - padding;
-        return `${x},${y}`;
-    }).join(' ');
-
-    return (
-        <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/30 mt-4">
-            <div className="text-xs text-slate-400 mb-2 flex justify-between">
-                <span>Reward History</span>
-                <span className="font-mono text-cyan-400">Last: {history[history.length - 1].toFixed(0)}</span>
-            </div>
-            <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-                <polyline
-                    points={points}
-                    fill="none"
-                    stroke="#22d3ee"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-            </svg>
-        </div>
-    );
-};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   config,
@@ -66,7 +33,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onReset,
   isPaused,
   setIsPaused,
-  onStep
+  onStep,
+  autoRotate,
+  onAutoRotateChange,
+  onResetCamera
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -79,25 +49,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
     `}>
       {/* Header / Toggle */}
       <div 
-        className="flex justify-between items-center p-4 border-b border-slate-700/50 cursor-pointer md:cursor-default"
+        className="flex justify-between items-center p-3 border-b border-slate-700/50 cursor-pointer md:cursor-default"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <div className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-teal-400" />
             <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-cyan-400">Control Center</h2>
         </div>
-        <div className="flex items-center gap-2">
-            <div className="text-xs font-mono text-slate-400 bg-slate-800/50 px-2 py-1 rounded hidden md:block">v1.1</div>
-            <div className="md:hidden text-slate-400">
+        
+        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {/* Camera Controls */}
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={onResetCamera}
+                    className="text-slate-400 hover:text-white transition-all hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] p-1"
+                    title="Reset Zoom"
+                >
+                    <Maximize className="w-5 h-5 stroke-[2.5]" />
+                </button>
+                
+                <button 
+                    onClick={() => onAutoRotateChange(!autoRotate)}
+                    className={`transition-all p-1 ${
+                        autoRotate 
+                        ? 'text-teal-400 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]' 
+                        : 'text-slate-400 hover:text-teal-400 hover:drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]'
+                    }`}
+                    title="Auto Rotate"
+                >
+                    <Orbit className={`w-5 h-5 stroke-[2.5] ${autoRotate ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
+
+            <div className="md:hidden text-slate-400 ml-2">
                 {isCollapsed ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </div>
         </div>
       </div>
       
       {/* Content */}
-      <div className={`flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar overscroll-contain ${isCollapsed ? 'hidden md:block' : 'block'}`}>
+      <div className={`flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar overscroll-contain ${isCollapsed ? 'hidden md:block' : 'block'}`}>
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:hidden">
           <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/30">
             <div className="text-xs text-slate-400 mb-1">Episode</div>
             <div className="text-xl font-bold font-mono text-white">{stats.episode}</div>
@@ -118,7 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <RewardChart history={stats.history} />
+        <RewardChart history={stats.history} className="md:hidden" />
 
         {/* Controls */}
         <div className="grid grid-cols-2 gap-3">
@@ -141,8 +134,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Training Mode Toggle */}
-        <div className="bg-teal-500/10 border border-teal-500/20 p-4 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
+        <div className="bg-teal-500/10 border border-teal-500/20 p-3 rounded-xl">
+            <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 text-teal-300 font-medium">
                     <Zap className="w-4 h-4" />
                     <span>Training Mode</span>
@@ -154,22 +147,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         checked={config.trainingMode || false}
                         onChange={(e) => onConfigChange({ trainingMode: e.target.checked })}
                     />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-500"></div>
                 </label>
             </div>
-            <p className="text-xs text-teal-200/60">
-                Disables rendering delay to maximize learning speed.
+            <p className="text-[10px] text-teal-200/60 leading-tight">
+                Disables rendering delay for max speed.
             </p>
         </div>
 
         {/* Parameters */}
-        <div className="space-y-5">
+        <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-300 border-b border-slate-700/50 pb-2">
                 <Settings className="w-4 h-4" />
                 <span>Hyperparameters</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Learning Rate (α)</span>
                     <span className="font-mono text-cyan-300">{config.alpha.toFixed(2)}</span>
@@ -181,11 +174,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     step="0.01"
                     value={config.alpha}
                     onChange={(e) => onConfigChange({ alpha: parseFloat(e.target.value) })}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                 />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Discount Factor (γ)</span>
                     <span className="font-mono text-teal-300">{config.gamma.toFixed(2)}</span>
@@ -197,11 +190,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     step="0.01"
                     value={config.gamma}
                     onChange={(e) => onConfigChange({ gamma: parseFloat(e.target.value) })}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
                 />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Exploration (ε)</span>
                     <span className="font-mono text-cyan-300">{config.epsilon.toFixed(2)}</span>
@@ -213,33 +206,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     step="0.01"
                     value={config.epsilon}
                     onChange={(e) => onConfigChange({ epsilon: parseFloat(e.target.value) })}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                 />
             </div>
         </div>
 
         {/* Simulation Speed */}
-        {!config.trainingMode && (
-            <div className="space-y-3 pt-2 border-t border-slate-700/50">
-                <div className="flex justify-between text-xs">
-                    <span className="text-slate-400 flex items-center gap-1"><Play className="w-3 h-3"/> Sim Speed</span>
-                    <span className="font-mono text-teal-300">{simulationSpeed}ms</span>
-                </div>
-                <input
-                    type="range"
-                    min="10"
-                    max="500"
-                    step="10"
-                    value={510 - simulationSpeed}
-                    onChange={(e) => setSimulationSpeed(510 - parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                    <span>Slow</span>
-                    <span>Fast</span>
-                </div>
+        <div 
+            className={`space-y-2 pt-2 border-t border-slate-700/50 transition-opacity duration-300 ${config.trainingMode ? 'opacity-40 grayscale' : 'opacity-100'}`}
+            title={config.trainingMode ? "Training Mode is active ⵄ" : ""}
+        >
+            <div className="flex justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1"><Play className="w-3 h-3"/> Sim Speed</span>
+                <span className="font-mono text-teal-300">{simulationSpeed}ms</span>
             </div>
-        )}
+            <input
+                type="range"
+                min="10"
+                max="500"
+                step="10"
+                value={510 - simulationSpeed}
+                onChange={(e) => setSimulationSpeed(510 - parseInt(e.target.value))}
+                className={`w-full h-1.5 bg-slate-700 rounded-lg appearance-none accent-teal-500 ${config.trainingMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                <span>Slow</span>
+                <span>Fast</span>
+            </div>
+        </div>
 
         <button
           onClick={onReset}
