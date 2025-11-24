@@ -2,6 +2,8 @@
 
 **Q-Vision 3D** is an interactive 3D Reinforcement Learning (RL) environment designed to visualize and teach RL concepts. It features a custom-built 3D world where an intelligent agent learns to navigate a grid, avoid hazards, and reach goals.
 
+This project was 80% vibe-coded as a fun experiment for me to learn how reinforcement learning really works, so I decided to share it with the community!
+
 ![Q-Vision 3D Screenshot](./public/assets/screenshot.png)
 
 ## Features
@@ -35,6 +37,17 @@ The Control Center dashboard provides real-time control over the Q-Learning algo
 -   **Rotate**: Click and drag to rotate the camera
 -   **Zoom**: Scroll wheel to zoom in/out
 -   **Pan**: Right-click and drag to pan the view
+
+## Tech Stack
+
+-   **React** - UI framework
+-   **TypeScript** - Type-safe JavaScript
+-   **React Three Fiber** - React renderer for Three.js
+-   **Three.js** - 3D graphics library
+-   **@react-three/drei** - Useful helpers for React Three Fiber
+-   **Vite** - Fast build tool and dev server
+-   **Tailwind CSS** - Utility-first CSS framework
+-   **Lucide React** - Beautiful icon library
 
 ## Why this Project?
 
