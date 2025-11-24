@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Box, Environment, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -12,6 +12,8 @@ interface GridWorldProps {
   hazards: [number, number][];
   agent: QLearningAgent;
   episode: number;
+  autoRotate: boolean;
+  resetCameraTrigger: number;
 }
 
 const WoodenRobot: React.FC = () => {
@@ -68,14 +70,10 @@ const Arrow: React.FC<{ direction: number }> = ({ direction }) => {
   
   return (
     <group rotation={[0, -direction * (Math.PI / 2), 0]}>
-        {/* Simple arrow shape using a cone pointing -Z (Up in grid terms) */}
-        {/* Actually, let's just use a cone pointing +Z and rotate it. */}
-        {/* 0: Up (-Z). 1: Right (+X). 2: Down (+Z). 3: Left (-X). */}
-        
-        {/* Let's try a flat triangle */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, -0.2]}>
-            <coneGeometry args={[0.1, 0.2, 3]} /> {/* Triangle */}
-            <meshStandardMaterial color="rgba(255,255,255,0.8)" transparent opacity={0.8} />
+        {/* Arrow shape */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} castShadow>
+            <coneGeometry args={[0.15, 0.3, 3]} /> {/* Triangle, slightly larger */}
+            <meshStandardMaterial color="#FFFFFF" emissive="#FFFFFF" emissiveIntensity={0.5} roughness={0.1} />
         </mesh>
     </group>
   );
@@ -163,25 +161,28 @@ const Tile: React.FC<{
 };
 
 // Component to handle responsive camera adjustments
-const ResponsiveCamera: React.FC<{ controlsRef: React.RefObject<any>, setIsMobile: (mobile: boolean) => void }> = ({ controlsRef, setIsMobile }) => {
+const ResponsiveCamera: React.FC<{ 
+    controlsRef: React.RefObject<any>, 
+    resetTrigger: number 
+}> = ({ controlsRef, resetTrigger }) => {
   const { camera } = useThree();
 
+  // Handle Resize and Initial Position
   useEffect(() => {
     const handleResize = () => {
       const isMobile = window.innerWidth < 768;
-      setIsMobile(isMobile);
       
       if (isMobile) {
           // Mobile: Tilted view from above-front to show grid clearly above control panel
           // Position creates the perfect angle shown in the reference screenshot
-          camera.position.set(0, 16, 18);
+          camera.position.set(0, 20, 22);
           if (controlsRef.current) {
               controlsRef.current.target.set(0, 0, 6); // Look forward to push grid higher in viewport
               controlsRef.current.update();
           }
       } else {
           // Desktop: Standard view
-          camera.position.set(0, 8, 8);
+          camera.position.set(0, 12, 12);
           if (controlsRef.current) {
               controlsRef.current.target.set(0, 0, 0);
               controlsRef.current.update();
@@ -195,7 +196,27 @@ const ResponsiveCamera: React.FC<{ controlsRef: React.RefObject<any>, setIsMobil
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [camera, controlsRef, setIsMobile]);
+  }, [camera, controlsRef]);
+
+  // Handle Reset Trigger
+  useEffect(() => {
+      if (resetTrigger > 0) {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            camera.position.set(0, 20, 22);
+            if (controlsRef.current) {
+                controlsRef.current.target.set(0, 0, 6);
+                controlsRef.current.update();
+            }
+        } else {
+            camera.position.set(0, 12, 12);
+            if (controlsRef.current) {
+                controlsRef.current.target.set(0, 0, 0);
+                controlsRef.current.update();
+            }
+        }
+      }
+  }, [resetTrigger, camera, controlsRef]);
 
   return null;
 };
@@ -206,10 +227,11 @@ export const GridWorld: React.FC<GridWorldProps> = ({
   goalPosition,
   hazards,
   agent,
-  episode
+  episode,
+  autoRotate,
+  resetCameraTrigger
 }) => {
   const orbitControlsRef = React.useRef<any>(null);
-  const [isMobile, setIsMobile] = useState(false);
 
   // Generate grid tiles
   const tiles = useMemo(() => {
@@ -247,9 +269,9 @@ export const GridWorld: React.FC<GridWorldProps> = ({
   }, [agentPosition, gridSize, goalPosition, hazards, agent, episode]); // Re-render on episode/agent move to update Q-colors
 
   return (
-    <div className="w-full h-full bg-gray-900">
-      <Canvas shadows camera={{ position: [0, 8, 8], fov: 50 }} dpr={[1, 2]}>
-        <ResponsiveCamera controlsRef={orbitControlsRef} setIsMobile={setIsMobile} />
+    <div className="w-full h-full">
+      <Canvas shadows camera={{ position: [0, 12, 12], fov: 50 }} dpr={[1, 2]}>
+        <ResponsiveCamera controlsRef={orbitControlsRef} resetTrigger={resetCameraTrigger} />
         <color attach="background" args={['#000000']} />
         {/* No fog for pure black aesthetic */}
         
@@ -266,14 +288,17 @@ export const GridWorld: React.FC<GridWorldProps> = ({
         </directionalLight>
         
         <Environment preset="city" />
-        <OrbitControls ref={orbitControlsRef} minPolarAngle={0} maxPolarAngle={Math.PI / 2.2} />
+        <OrbitControls 
+            ref={orbitControlsRef} 
+            minPolarAngle={0} 
+            maxPolarAngle={Math.PI / 2.2} 
+            autoRotate={autoRotate}
+            autoRotateSpeed={2.0}
+        />
         
         <group position={[0, -0.1, 0]}>
-             {/* Floor underneath grid for aesthetic */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-                <planeGeometry args={isMobile ? [30, 30] : [50, 50]} />
-                <meshStandardMaterial color="#2A2A2A" roughness={0.9} metalness={0} />
-            </mesh>
+             {/* Grid Helper for professional 3D look */}
+             <gridHelper args={[50, 50, 0x444444, 0x222222]} position={[0, -0.01, 0]} />
             {tiles}
         </group>
       </Canvas>
