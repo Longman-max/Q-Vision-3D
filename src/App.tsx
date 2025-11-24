@@ -5,8 +5,12 @@ import { GridWorld } from './components/World/GridWorld';
 import { Dashboard } from './components/UI/Dashboard';
 import { useQLearning } from './hooks/useQLearning';
 
+import { RewardChart } from './components/UI/RewardChart';
+
 function App() {
   const [showInfo, setShowInfo] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [resetCameraTrigger, setResetCameraTrigger] = useState(0);
   
   // Close modal on ESC key press
   useEffect(() => {
@@ -40,9 +44,12 @@ function App() {
   return (
     <div className="relative w-full h-[100dvh] bg-[#000000] overflow-hidden">
       {/* Header */}
-      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-none">
+      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-none flex justify-between items-start">
+        {/* Title & Controls Card */}
         <div className="bg-slate-900/80 backdrop-blur-md px-6 py-4 rounded-xl border border-teal-700/50 shadow-xl pointer-events-auto w-fit flex items-center gap-6">
           <h1 className="text-white font-bold text-xl leading-none">Q-Vision 3D</h1>
+          
+          <div className="h-8 w-px bg-slate-700/50"></div>
           
           <button
             onClick={() => setShowInfo(true)}
@@ -61,6 +68,55 @@ function App() {
           >
             <Github className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </a>
+
+          <div className="h-8 w-px bg-slate-700/50"></div>
+
+          <div 
+            className="flex items-center gap-2 text-slate-400 cursor-not-allowed group opacity-70"
+            title="coming soon"
+          >
+            <span className="font-bold text-base text-white group-hover:text-slate-300 transition-colors">Interact</span>
+            <svg className="w-7 h-7 text-teal-500 group-hover:scale-100 transition-transform" viewBox="0 0 24 24" fill="currentColor">
+               {/* Infinity Loop Base */}
+               <path d="M7.5 7C4.46 7 2 9.46 2 12.5S4.46 18 7.5 18 12.5 15.5 12.5 12.5 10.54 7 7.5 7zm0 9c-1.93 0-3.5-1.57-3.5-3.5S5.57 9 7.5 9 11 10.57 11 12.5 9.43 16 7.5 16z" />
+               <path d="M16.5 7C13.46 7 11.5 9.46 11.5 12.5S13.46 18 16.5 18 22 15.54 22 12.5 19.54 7 16.5 7zm0 9c-1.93 0-3.5-1.57-3.5-3.5S14.57 9 16.5 9 20 10.57 20 12.5 18.43 16 16.5 16z" />
+               {/* Plus Sign (Left) */}
+               <rect x="6.5" y="10.5" width="2" height="4" rx="0.2" />
+               <rect x="5.5" y="11.5" width="4" height="2" rx="0.2" />
+               {/* Minus Sign (Right) */}
+               <rect x="14.5" y="11.5" width="4" height="2" rx="0.2" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Center Stats & Chart Container */}
+        <div className="hidden md:flex flex-col items-center gap-2 absolute left-1/2 -translate-x-1/2 top-4 pointer-events-auto">
+            {/* Stats Row */}
+            <div className="bg-slate-900/80 backdrop-blur-md px-8 py-3 rounded-xl border border-teal-700/50 shadow-xl flex items-center gap-8">
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Episode</span>
+                    <span className="text-xl font-mono font-bold text-white leading-none">{stats.episode}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Step</span>
+                    <span className="text-xl font-mono font-bold text-cyan-400 leading-none">{stats.step}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Reward</span>
+                    <span className={`text-xl font-mono font-bold leading-none ${stats.totalReward >= 0 ? 'text-teal-400' : 'text-orange-400'}`}>
+                        {stats.totalReward.toFixed(1)}
+                    </span>
+                </div>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Wins</span>
+                    <span className="text-xl font-mono font-bold text-cyan-400 leading-none">{stats.wins}</span>
+                </div>
+            </div>
+            
+            {/* Reward Chart */}
+            <div className="w-full">
+                <RewardChart history={stats.history} className="bg-slate-900/80 backdrop-blur-md border border-teal-700/50 shadow-xl !mt-0" />
+            </div>
         </div>
       </div>
 
@@ -117,8 +173,20 @@ function App() {
                     <span className="font-mono">Scroll wheel</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Reset:</span>
+                    <span className="text-slate-400">Reset Agent:</span>
                     <span className="font-mono">Click Reset Agent</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Reset Zoom:</span>
+                    <span className="font-mono">Click Maximize Icon</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Auto Rotate:</span>
+                    <span className="font-mono">Click Orbit Icon</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Interact:</span>
+                    <span className="font-mono">Connect Arduino (Coming Soon)</span>
                   </div>
                 </div>
               </section>
@@ -214,7 +282,7 @@ function App() {
         </div>
       )}
 
-      <div className="absolute inset-0 w-full h-full">
+      <div className="absolute inset-0 w-full h-full" onClick={() => autoRotate && setAutoRotate(false)}>
         <GridWorld
           agentPosition={agentPosition}
           gridSize={gridSize}
@@ -222,6 +290,8 @@ function App() {
           hazards={hazards}
           agent={agent}
           episode={stats.episode}
+          autoRotate={autoRotate}
+          resetCameraTrigger={resetCameraTrigger}
         />
       </div>
       
@@ -235,6 +305,9 @@ function App() {
         isPaused={isPaused}
         setIsPaused={setIsPaused}
         onStep={step}
+        autoRotate={autoRotate}
+        onAutoRotateChange={setAutoRotate}
+        onResetCamera={() => setResetCameraTrigger(prev => prev + 1)}
       />
     </div>
   );
